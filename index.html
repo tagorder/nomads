@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="none">
+<head>
+<meta charset="utf-8">
+<title>Nomads</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+<style>
+body, button {background-color:#999; overflow:hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";}
+
+#plain {box-sizing:border-box; position:absolute; right:100%; top:50%; transition: right 1s ease;}
+#plain:before {content:''; position:absolute; top:-5px; right:-5px; bottom:-5px; left:-5px; background-color:#ddd; overflow:hidden;
+-webkit-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);
+-moz-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);
+box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);}
+.camp {display:block; padding:5px; box-sizing:border-box; position:absolute;}
+.camp:before {content:''; position:absolute; top:5px; right:5px; bottom:5px; left:5px; background-color:#aaa;}
+.nomad {z-index:10;transition:opacity 0.5s ease; position:relative; outline:0; cursor:pointer; color:#fff; border:0; width:100%; height:100%; text-align:center; font-size:16px; line-height:2; font-weight:bold; text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.5);
+-webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+-moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);}
+
+#modal {text-align:center; position:absolute; left:50%; top:50%; height:220px; margin-top:-110px; width:220px; margin-left:-110px; box-sizing:border-box; padding:30px; transition: left 1s ease; background-color:#fff;
+-webkit-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);
+-moz-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);
+box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.5);}
+
+.button {display:block; background-color:#252525; color: #fff; border:0; padding:10px 20px; cursor:pointer; margin-top:20px; position:absolute; left:30px; bottom:30px; width:calc(100% - 60px);
+-webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+-moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);}}
+
+label {margin:5px;}
+select {margin:5px; padding:10px 20px 10px 10px;}
+
+h1 {margin-top:0; margin-bottom:20px; font-size:20px;}
+
+.color-1 {background-color: rgba(148,0,211,0.75);}
+.color-2 {background-color: rgba(0,0,255,0.75);}
+.color-3 {background-color: rgba(0,200,0,0.75);}
+.color-4 {background-color: rgba(255,255,0,0.75);}
+.color-5 {background-color: rgba(255,127,0,0.75);}
+.color-6 {background-color: rgba(255,0,0,0.75);}
+</style>
+</head>
+
+<body>
+
+<div id="modal">
+	<h1>Nomads</h1>
+	<label>Level</label><select id="level">
+	<option value="1">1</option>
+	<option value="2">2</option>
+	<option value="3">3</option>
+	<option value="4">4</option>
+	<option value="5">5</option>
+	<option value="6">6</option>
+	</select>
+	<button class="button" id="init">New Game</button> 
+</div>
+<div id="plain"></div>
+
+<script
+  src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous"></script>
+<script>
+
+$('#init').on('click', function(e){
+	e.preventDefault();
+	newGame();
+	$('#modal').css({left:'1000%'});
+});
+
+$('html').on('click', '.nomad', function(){
+	move(this);
+});
+
+var cleared, level, dirs, steps, nomads, map, camp, plain, $plain = $('#plain');
+
+var getLevel = function(){
+	return $('#level').find(':selected').val();
+};
+
+var generateDirections = function(){
+	var dirs = [];
+	var dirValues = ['-x','+x','-y','+y'];
+	var dirTokens = ['↑','↓','←','→'];
+	for (var i = 0; i < dirTokens.length; i++){
+		dirs.push({
+			value: dirValues[i],
+			token: dirTokens[i]
+		});
+	}
+	return dirs;
+};
+
+var generateSteps = function(level){
+	var steps = [];
+	var stepTokens = ['1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'];
+	for (var i = 0; i < level; i++){
+		steps.push({
+			value: i + 1,
+			token: stepTokens[i]
+		});
+	}
+	return steps;
+};
+
+var generateNomads = function(level, dirs, steps){
+	var nomads = [];
+
+	//take each step...
+	for (var i = 0, stepsLength = steps.length; i < stepsLength; i++){
+		//...combine it with each direction...
+		for (var j = 0, dirsLength = dirs.length; j < dirsLength; j++){
+			//...k number of times
+			for (var k = 0; k < level; k++){
+				nomads.push({
+					step: steps[i],
+					dir: dirs[j]
+				});
+			}
+		}
+	}
+	
+	return nomads;
+};
+
+var newGame = function(){
+
+	cleared = 0;
+	level = getLevel();
+	dirs = generateDirections();
+	steps = generateSteps(level);
+	nomads = generateNomads(level, dirs, steps);
+	nomads = shuffle(nomads);
+	$plain.empty();
+
+	map = {
+		width: Object.keys(steps).length * 2,
+		height: Object.keys(steps).length * 2
+	};
+
+	camp = {
+		width: 50,
+		height: 50
+	};
+
+	plain = {
+		width: camp.width * map.width,
+		height: camp.height * map.height
+	};
+
+	var x = 0;
+	for (var i = 0; i < map.height; i++){
+		for (var j = 0; j < map.width; j++){
+			var $nomad = $('<button class="nomad color-' + nomads[x].step.value + '" />')
+			.data({
+				step: nomads[x].step.value,
+				dir: nomads[x].dir.value
+			})
+			.text(nomads[x].step.token + nomads[x].dir.token);
+			
+			$('<div class="camp" data-x="' + i + '" data-y="' + j + '" />')
+			.css({
+				left: camp.width * j + 'px',
+				top: camp.height * i + 'px',
+				width: camp.width + 'px',
+				height: camp.height + 'px'
+			})
+			.append($nomad)
+			.appendTo($plain);
+			x++;
+		}
+	}
+	
+	$plain
+	.css({
+		width: plain.width + 'px',
+		height: plain.height + 'px',
+		marginRight: '-' + (plain.width / 2) + 'px',
+		marginTop: '-' + (plain.height / 2) + 'px',
+		right:'50%'
+	});
+};
+
+var clear = function(nomad){
+	$(nomad).data({step:0,dir:'z'}).animate({opacity:0},{complete:
+		function(){
+			cleared++;
+			if (cleared === map.width * map.height){
+				celebrate();
+			}
+		}
+	});
+};
+
+var celebrate = function(){
+	$plain.css({right:'1000%'});
+	//$plain.css({right:'1000%'});
+	$('#modal h1').text('Cleared!');
+	$('#modal').css({left:'50%'});
+};
+
+var swap = function(destiny, nomad){
+	
+	var $destiny = $(destiny);
+	var $destinyCamp = $destiny.parent('.camp');
+	var destinyCamp = $destinyCamp.data();
+	var destiny = $destiny.data();
+	var destinyMotion = {};
+	
+	var $nomad = $(nomad);
+	var $nomadCamp = $nomad.parent('.camp');
+	var nomadCamp = $nomadCamp.data();
+	var nomad = $nomad.data();
+	var nomadMotion = {};
+	
+	var distance = 0;
+	
+	switch (nomad.dir){
+		case '-x':
+			distance = nomad.step * camp.height;
+			destinyMotion = {top:distance};
+			nomadMotion = {top:-distance};
+			break;
+		case '+x':
+			distance = nomad.step * camp.height;			
+			destinyMotion = {top:-distance};
+			nomadMotion = {top:distance};
+			break;
+		case '-y':
+			distance = nomad.step * camp.width;
+			destinyMotion = {left:distance};
+			nomadMotion = {left:-distance};
+			break;
+		case '+y':
+			distance = nomad.step * camp.width;
+			destinyMotion = {left:-distance};
+			nomadMotion = {left:distance};
+			break;
+		default:
+			return false;
+	}
+	
+	$destiny.animate(destinyMotion, {complete:
+		function(){
+			var d = $destiny.detach();
+			d.css({top:0,left:0}).appendTo($nomadCamp);
+		}
+	});
+	$nomad.animate(nomadMotion, {complete:
+		function(){
+			var n = $nomad.detach();
+			n.css({top:0,left:0}).appendTo($destinyCamp);
+		}
+	});
+};
+
+var move = function(nomad){
+	
+	var $nomad = $(nomad);
+	var camp = $nomad.parent('.camp').data();
+	nomad = $(nomad).data();
+	
+	switch (nomad.dir){
+		case '-x':
+			dataX = (camp.x - nomad.step + map.height) % map.height;
+			dataY = camp.y;
+			break;
+		case '+x':
+			dataX = (camp.x + nomad.step) % map.height;
+			dataY = camp.y;
+			break;
+		case '-y':
+			dataX = camp.x;
+			dataY = (camp.y - nomad.step + map.width) % map.width;
+			break;
+		case '+y':
+			dataX = camp.x;
+			dataY = (camp.y + nomad.step) % map.width;
+			break;
+		default:
+			return false;
+	}
+
+	var $destiny = $('[data-x="' + dataX + '"]').filter('[data-y="' + dataY + '"]').find('.nomad');
+	var destiny = $destiny.data();
+	if (destiny.step === nomad.step){
+		clear($destiny);
+		clear($nomad);
+	} else {
+		swap($destiny, $nomad);
+	}
+	
+};
+
+/* https://github.com/Daplie/knuth-shuffle */
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+</script>
+</body>
+</html>
